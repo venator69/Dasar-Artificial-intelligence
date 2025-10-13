@@ -1,0 +1,169 @@
+# Python Program to solve the n-queens problem
+import random
+import matplotlib.pyplot as plt
+
+# h checker
+def h(mat):
+    n = len(mat)
+    h = 0
+    
+    queens = []
+    for row in range(n):
+        for col in range(n):
+            if mat[row][col] == 1:
+                queens.append((row, col))
+    
+    # Count conflicts
+    for i in range(len(queens)):
+        r1, c1 = queens[i]
+        for j in range(i+1, len(queens)):
+            r2, c2 = queens[j]
+            
+            # Same row or same column
+            if r1 == r2 or c1 == c2:
+                h += 1
+            # Same diagonal
+            elif abs(r1 - r2) == abs(c1 - c2):
+                h += 1
+                
+    return -h
+
+
+# Randomized initial state generator
+def randomized_initial(n):
+    # Create n x n zero matrix
+    mat = [[0 for _ in range(n)] for _ in range(n)]
+    
+    for col in range(n):
+        # Choose a random row to place a 1 in this column
+        row = random.randint(0, n-1)
+        mat[row][col] = 1
+    
+    return mat
+
+def successor_matrix(mat):
+    n=len(mat)
+    succ_mat = [[-99 for _ in range(n)] for _ in range(n)]
+    
+    for col in range(n):
+        # Find current row of the queen in this column
+        for row in range(n):
+            if mat[row][col] == 1:
+                current_row = row
+                break
+        
+        for new_row in range(n):
+            if new_row != current_row:
+                # Copy the board and move the queen
+                new_mat = [r[:] for r in mat]
+                new_mat[current_row][col] = 0
+                new_mat[new_row][col] = 1
+                # Compute heuristic after the move
+                succ_mat[new_row][col] = h(new_mat)
+    
+    return succ_mat
+
+import random
+
+import random
+
+def hill_climbing(mat, heur_matrix):
+    n = len(mat)
+    best_moves = [0] * n
+
+    # Step 1 & 2: Find row with maximum heuristic per column
+    for col in range(n):
+        max_h = float('-inf')
+        candidate_rows = []
+        for row in range(n):
+            h_val = heur_matrix[row][col]
+            if h_val > max_h:
+                max_h = h_val
+                candidate_rows = [row]
+            elif h_val == max_h:
+                candidate_rows.append(row)
+        best_moves[col] = random.choice(candidate_rows)
+
+    # Step 3: Find column where moving queen **increases conflicts most**
+    max_increase = float('-inf')
+    move_col = -1
+    for col in range(n):
+        current_row = next(r for r in range(n) if mat[r][col] == 1)
+        increase = heur_matrix[best_moves[col]][col] - heur_matrix[current_row][col]
+        if increase > max_increase:
+            max_increase = increase
+            move_col = col
+
+    # Step 4: Move the queen if it increases conflicts
+    if move_col != -1 and max_increase > 0:
+        current_row = next(r for r in range(n) if mat[r][move_col] == 1)
+        mat[current_row][move_col] = 0
+        mat[best_moves[move_col]][move_col] = 1
+        print("Moved queen in column", move_col, "from row", current_row, "to row", best_moves[move_col])
+
+    return mat
+
+def hill_climbing(mat, heur_matrix):
+    n = len(mat)
+    best_moves = [0] * n
+
+    # Step 1 & 2: Find row with maximum heuristic per column
+    for col in range(n):
+        max_h = float('-inf')
+        candidate_rows = []
+        for row in range(n):
+            h_val = heur_matrix[row][col]
+            if h_val > max_h:
+                max_h = h_val
+                candidate_rows = [row]
+            elif h_val == max_h:
+                candidate_rows.append(row)
+        best_moves[col] = random.choice(candidate_rows)
+
+    # Step 3: Find column where moving queen **increases conflicts most**
+    max_increase = float('-inf')
+    move_col = -1
+    for col in range(n):
+        current_row = next(r for r in range(n) if mat[r][col] == 1)
+        increase = heur_matrix[best_moves[col]][col] - heur_matrix[current_row][col]
+        if increase > max_increase:
+            max_increase = increase
+            move_col = col
+
+    # Step 4: Move the queen if it increases conflicts
+    if move_col != -1 and max_increase > 0:
+        current_row = next(r for r in range(n) if mat[r][move_col] == 1)
+        mat[current_row][move_col] = 0
+        mat[best_moves[move_col]][move_col] = 1
+        print("Moved queen in column", move_col, "from row", current_row, "to row", best_moves[move_col])
+
+    return mat
+
+if __name__ == "__main__":
+    n = 8
+    ans = randomized_initial(n)
+    
+    for row in ans:
+        print(" ".join(map(str, row)))
+    
+    max_iterations = 100
+    h_val = [0] * max_iterations
+    for i in range(max_iterations):
+        succ = successor_matrix(ans)  # recompute heuristics each iteration
+        h_val[i] = h(ans)               # number of attacking pairs
+        if h_val[i] == 0:
+            break                     # solution found
+        ans = hill_climbing(ans, succ)  # move one queen
+        
+    
+    print("Final board:")
+    for row in ans:
+        print(" ".join(map(str, row)))
+    print("Final h =", -h(ans))
+
+    plt.plot(range(1, len(h_val)+1), h_val, marker='o')
+    plt.xlabel("Iteration")
+    plt.ylabel("Number of attacking pairs (h)")
+    plt.title("Hill-Climbing N-Queens Heuristic over Iterations")
+    plt.grid(True)
+    plt.show()
