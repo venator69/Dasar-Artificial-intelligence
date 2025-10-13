@@ -16,6 +16,7 @@ def format_weights(weight):
   ]
   return(format_weights)
 
+# Pergeseran Neighbor
 def move_neighbor(bin_rem, i, j, k):
     barang = bin_rem[j]['barang'].pop(k)
 
