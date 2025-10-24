@@ -211,7 +211,9 @@ def Simmulated_annealing(bin, iterasi, T=100):
         else:
             print(f"Iterasi ke-{i+1}: ditolak (H={current})")
   return bin
-    
+
+def Genetic(bin, iterasi):
+  pass
 
 
 
