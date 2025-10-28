@@ -6,7 +6,7 @@ import copy
 import random
 import math
 import globals_data
-from globals_data import reset_globals
+from globals_data import reset_globals, reset_gen
 # Fungsi format mapping dari array[int] -> array[dict]
 
 def format_weights(weight):
@@ -206,8 +206,8 @@ def RRHC_uc(bins, iterasi, Max_no_improve):
   best_bin = bins
   best_bin_value = heuristic_uc(bins)
   while i < iterasi and restart < Max_no_improve:
-    globals_data.display_heur.append((i, best_bin_value))
     current = heuristic_uc(bins)
+    globals_data.display_heur.append((i, current, best_bin_value))
     if current == 0:
       print(f"Iterasi ke-{i+1}: solusi optimal ditemukan (H=0)")
       globals_data.display_heur.append((i, heuristic_uc(bin)))
@@ -294,10 +294,11 @@ def genetic_algorithm_uc(bin, population_size, generations, mutation_rate, fitne
   best_overall = {'Fitness': float('-inf'),
     'bin': None}
   fitsum = 0
+  reset_gen()
   for population in range(population_size):
     new_bin = SAHC_uc(random_restart(bin, c), 100)
     new_parent = {
-        'Fitness': heuristic_uc(bin),
+        'Fitness': 100 / (1 + heuristic_uc(new_bin)),
         'bin': new_bin,
     }
     fitsum += new_parent['Fitness']
@@ -307,7 +308,7 @@ def genetic_algorithm_uc(bin, population_size, generations, mutation_rate, fitne
     # Inisialisasi populasi awal
     # normalisasi fitness
     for p in parents:
-      p['Fitness'] = 1 / (1 + heuristic_uc(p['bin'])) * 100
+      p['Fitness'] = 100 / (1 + heuristic_uc(p['bin']))
     # Urutkan berdasarkan fitness
     parents = sorted(parents, key=lambda x: x['Fitness'], reverse=True)
     # Pilih 20% terbaik
