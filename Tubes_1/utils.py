@@ -5,7 +5,10 @@
 import copy
 import random
 import math
+import globals_data
+from globals_data import reset_globals
 # Fungsi format mapping dari array[int] -> array[dict]
+
 def format_weights(weight):
   format_weights = [
     {
@@ -33,13 +36,17 @@ def move_neighbor_uc(bin_rem, i, j, k):
 
     return bin_rem
 
+def reindex(bin_rem):
+  for index, b in enumerate(bin_rem):
+    b['kontainer'] = f'Kontainer {index+1}'
+
 # Fungsi untuk mencetak isi bin
 def print_bins(bin_rem):
+  reindex(bin_rem)
   for b in bin_rem:
     print(f"{b['kontainer']} (total: {b['total']})")
     for item in b['barang']:
       print(f"  * {item['id']} ({item['ukuran']})")
-
 
 def heuristic_uc(bin_rem):
 # Jika jumlah bin konstan, total ruang kosong selalu konstant. sehingga jumlah bin tidak perlu dihitung pada heuristic
@@ -50,8 +57,9 @@ def heuristic_uc(bin_rem):
       h += abs(b['remaining']) * 10 # penalti 10x untuk overfill
     else:
       h += b['remaining'] # total ruang kosong
-  return (h)  
+  return (h)
     
+
 def worst(weight, c):
     n = len(weight)
     # List dari bin yang digunakan
@@ -67,7 +75,43 @@ def worst(weight, c):
       bin_rem.append(new_bin)
     
     return bin_rem
-  
+
+# Fungsi untuk inisialisasi bin (First Fit)
+def first_fit(weight, c):
+
+  n = len(weight)
+  res = 0
+
+  # List dari bin yang digunakan
+  bin_rem = [] 
+
+  # Meletakkan item satu per satu
+  for i in range(n):
+    placed = False
+
+    # Meletakan item di bin yang ada
+    for j in range(res):
+      if bin_rem[j]['remaining'] >= weight[i]['ukuran']:
+        # meletakkan Item di bin yang ada
+        bin_rem[j]['barang'].append(weight[i])
+        bin_rem[j]['remaining'] -= weight[i]['ukuran']
+        bin_rem[j]['total'] += weight[i]['ukuran']
+        placed = True
+        break
+
+    # Buat bin baru jika item tidak muat di bin yang ada
+    if not placed:
+      new_bin = {
+          'kontainer': f'Kontainer {res+1}',
+          'remaining': c - weight[i]['ukuran'],
+          'total': weight[i]['ukuran'],
+          'barang': [weight[i]]
+      }
+      bin_rem.append(new_bin)
+      res += 1
+        
+  return bin_rem
+
 def random_restart(bin, c):
     weight = [item for sublist in [b['barang'] for b in bin] for item in sublist]
     n = len(weight)
@@ -106,10 +150,11 @@ def calculate_neighbors_uc(bin_rem):
   return states
 
 def SAHC_uc(bin, iterasi):
+  reset_globals()
   for i in range(iterasi):
     current = heuristic_uc(bin)
+    globals_data.display_heur.append((i, current))
     if current == 0:
-      # print(f"Iterasi ke-{i+1}: solusi optimal ditemukan (H=0)")
       break
     # Hitung semua neighbor
     neighbors = calculate_neighbors_uc(bin)
@@ -120,19 +165,22 @@ def SAHC_uc(bin, iterasi):
     # lakukan steepest descent jika ada perbaikan
     if best_value < current:
       bin = best_neighbor
-      # print(f"Iterasi ke-{i+1}: perbaikan ditemukan (H={best_value})")
+      
     else:
       # print(f"Iterasi ke-{i+1}: tidak ada perbaikan (H={current})")
       break
   return bin
 
 def SMHC_uc(bin, iterasi, Max_no_improve):
+  reset_globals()
   sidestep = 0
   i = 0
   while (i < iterasi and sidestep < Max_no_improve):
     current = heuristic_uc(bin)
+    globals_data.display_heur.append((i, current))
     if current == 0:
       print(f"Iterasi ke-{i+1}: solusi optimal ditemukan (H=0)")
+      globals_data.display_heur.append(current)
       break
     # Hitung semua neighbor
     neighbors = calculate_neighbors(bin)
@@ -152,14 +200,17 @@ def SMHC_uc(bin, iterasi, Max_no_improve):
   return bin
 
 def RRHC_uc(bins, iterasi, Max_no_improve):
+  reset_globals()
   restart = 0
   i = 0
   best_bin = bins
   best_bin_value = heuristic_uc(bins)
   while i < iterasi and restart < Max_no_improve:
+    globals_data.display_heur.append((i, best_bin_value))
     current = heuristic_uc(bins)
     if current == 0:
       print(f"Iterasi ke-{i+1}: solusi optimal ditemukan (H=0)")
+      globals_data.display_heur.append((i, heuristic_uc(bin)))
       break
     # Hitung semua neighbor
     neighbors = calculate_neighbors(bins)
@@ -174,7 +225,7 @@ def RRHC_uc(bins, iterasi, Max_no_improve):
       if best_value < best_bin_value:
         best_bin = best_neighbor
         best_bin_value = best_value
-        print(f"  * Solusi terbaik diperbarui (H={best_bin_value})")
+        print(f"Solusi terbaik diperbarui (H={best_bin_value})")
     else:
     # restart jika tidak ada perbaikan 
       print(f"Iterasi ke-{i+1}: tidak ada perbaikan (H={best_bin_value}), melakukan random restart")
@@ -186,8 +237,10 @@ def RRHC_uc(bins, iterasi, Max_no_improve):
 def SHC_uc(bin, iterasi):
   for i in range(iterasi):
     current = heuristic_uc(bin)
+    globals_data.display_heur.append((i, current))
     if current == 0:
       print(f"Iterasi ke-{i+1}: solusi optimal ditemukan (H=0)")
+      globals_data.display_heur.append(heuristic_uc(bin))
       break
     # Hitung semua neighbor
     neighbors = calculate_neighbors(bin)
@@ -202,10 +255,12 @@ def SHC_uc(bin, iterasi):
     else:
       print(f"Iterasi ke-{i+1}: tidak ada perbaikan (H={current})")
   return bin
-    
-def Simmulated_annealing_uc(bin, iterasi, T=100):
+
+def simmulated_annealing_uc(bin, iterasi, T=100):
+  reset_globals()
   for i in range(iterasi):
     current = heuristic_uc(bin)
+    globals_data.display_heur.append((i, current))
     if current == 0:
       print(f"Iterasi ke-{i+1}: solusi optimal ditemukan (H=0)")
       break
@@ -231,18 +286,19 @@ def Simmulated_annealing_uc(bin, iterasi, T=100):
         print(f"Iterasi ke-{i+1}: ditolak (H={current})")
     # Turunkan suhu
     T = T * 0.95
+    globals_data.display_heur.append((i, heuristic_uc(bin)))
   return bin
-    
 
-def Genetic_algorithm_uc(bin, population_size, generations, mutation_rate, fitness_threshold, c):
+def genetic_algorithm_uc(bin, population_size, generations, mutation_rate, fitness_threshold, c, formatted_weights):
   parents = []
   best_overall = {'Fitness': float('-inf'),
     'bin': None}
   fitsum = 0
   for population in range(population_size):
+    new_bin = SAHC_uc(random_restart(bin, c), 100)
     new_parent = {
         'Fitness': heuristic_uc(bin),
-        'bin': SAHC_uc(random_restart(bin, c), 100),
+        'bin': new_bin,
     }
     fitsum += new_parent['Fitness']
     parents.append(new_parent)
@@ -253,19 +309,20 @@ def Genetic_algorithm_uc(bin, population_size, generations, mutation_rate, fitne
     for p in parents:
       p['Fitness'] = 1 / (1 + heuristic_uc(p['bin'])) * 100
     # Urutkan berdasarkan fitness
-    parents = sorted(parents, key=lambda x: x['Fitness'])
+    parents = sorted(parents, key=lambda x: x['Fitness'], reverse=True)
     # Pilih 20% terbaik
     top = math.ceil(population_size * fitness_threshold/100)  # ceil agar minimal 1 elemen
     selected = parents[:top]
     # lakukan crossover dan mutasi untuk membuat populasi baru
-    children = crossover_uc(selected, population_size, c)
+    children = crossover_uc(selected, population_size, c, formatted_weights)
     parents = mutate(children, mutation_rate)
     best = max(parents, key=lambda x: x['Fitness'])
-    
+    globals_data.display_genetic.append((gen, best_overall['Fitness'], best['Fitness']))
     if best['Fitness'] > best_overall['Fitness']:
       best_overall = best
       print(f"Generasi ke-{gen+1}: solusi terbaik diperbarui (Fitness={best_overall['Fitness']:.2f})")
-
+    else:
+      print(f"Generasi ke-{gen+1}: tidak ada perbaikan (Fitness={best_overall['Fitness']:.2f})")
   return(best_overall['bin'])
 
 def mutate(children, mutation_rate):
@@ -286,7 +343,7 @@ def mutate(children, mutation_rate):
           barang_list[i], barang_list[j] = barang_list[j], barang_list[i]
   return children
 
-def repair_bin_uc(child, c):
+def repair_bin_uc(child, c, formatted_weights):
     bins = child
 
     # Kumpulkan semua item yang ada di setiap bin
@@ -320,7 +377,7 @@ def repair_bin_uc(child, c):
             b['remaining'] -= item['ukuran']
             break
     # lakukan kembali Steepest ascend hill climbing untuk memperbaiki overfill
-    bins = SAHC_uc(bins, c)
+    bins = SAHC_uc(bins, 50)
     
     # Update fitness dan bin
     child_repaired = {
@@ -329,8 +386,7 @@ def repair_bin_uc(child, c):
     }
     return child_repaired
 
-  
-def crossover_uc(selected, population_size, c):
+def crossover_uc(selected, population_size, c, formatted_weights):
   children = []
   for population in range(population_size//2):
     # pilih dua parent secara random
@@ -346,23 +402,16 @@ def crossover_uc(selected, population_size, c):
     # Crossover satu titik
     child_bin1 = parent1['bin'][:cross_point] + parent2['bin'][cross_point:]
     child_bin2 = parent2['bin'][:cross_point] + parent1['bin'][cross_point:]
-    child1  = repair_bin_uc(child_bin1, c)
-    child2  = repair_bin_uc(child_bin2, c)
+    child1  = repair_bin_uc(child_bin1, c, formatted_weights)
+    child2  = repair_bin_uc(child_bin2, c, formatted_weights)
     children.append(child1)
     children.append(child2)
   return children
 
-weight = [9, 2, 5, 4, 7, 1, 3, 8, 6, 2, 5, 4, 7, 1, 3, 8, 6]
-# weight = [9, 2, 5, 4, 7, 1]
-formatted_weights = format_weights(weight)
-c = 10
-# print("Jumlah bin dengan first fit : ",firstFit(formatted_weights, c))
-# print_bins(firstFit(formatted_weights, c))
-# print("Heuristic (total ruang kosong):", heuristic(firstFit(formatted_weights, c)))
-# print_bins(SMHC(firstFit(formatted_weights, c), 100, 10))
-# print_bins(SHC(firstFit(formatted_weights, c), 100))
-# print_bins(worst(formatted_weights, c))
-# print_bins(RRHC_uc(worst(formatted_weights, c), 100, 10))
-
-#def Genetic_algorithm_uc(bin, population_size, generations, mutation_rate dalam persen , fitness_threshold dalam persen, c):
-print_bins(Genetic_algorithm_uc(worst(formatted_weights, c), 10, 10, 10, 20, 10))
+# contoh penggunaan
+if __name__ == "__main__":
+    weight = [9,2,5,4,7,1,3,8,6,2,5,4,7,1,3,8,6]
+    formatted = format_weights(weight)
+    c = 10
+    bins = worst(formatted, c)
+    print_bins(genetic_algorithm_uc(bins, 10, 10, 10, 20, c, formatted))
