@@ -183,18 +183,21 @@ def SMHC_uc(bin, iterasi, Max_no_improve):
       globals_data.display_heur.append(current)
       break
     # Hitung semua neighbor
-    neighbors = calculate_neighbors(bin)
+    neighbors = calculate_neighbors_uc(bin)
 
     # Temukan neighbor terbaik (heuristic terkecil)
     best_neighbor, best_value = min(neighbors, key=lambda x: x[1])
     
     # lakukan steepest descent jika ada perbaikan atau sidestep
-    if best_value <= current:
+    if best_value < current:
       bin = best_neighbor
       print(f"Iterasi ke-{i+1}: perbaikan ditemukan (H={best_value})")
+    elif (best_value == current):
+      bin = best_neighbor
+      print(f"Iterasi ke-{i+1}: sidestep dilakukan (H={best_value})")
+      sidestep += 1
     else:
       print(f"Iterasi ke-{i+1}: tidak ada perbaikan (H={current})")
-      break
       sidestep += 1
     i += 1
   return bin
