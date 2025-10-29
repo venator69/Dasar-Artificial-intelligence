@@ -202,13 +202,13 @@ def SMHC_uc(bin, iterasi, Max_no_improve):
     i += 1
   return bin
 
-def RRHC_uc(bins, iterasi, Max_no_improve):
+def RRHC_uc(bins, iterasi):
   reset_globals()
   restart = 0
   i = 0
   best_bin = bins
   best_bin_value = heuristic_uc(bins)
-  while i < iterasi and restart < Max_no_improve:
+  while i < iterasi:
     current = heuristic_uc(bins)
     globals_data.display_heur.append((i, current, best_bin_value))
     if current == 0:
@@ -259,13 +259,13 @@ def SHC_uc(bin, iterasi):
       print(f"Iterasi ke-{i+1}: tidak ada perbaikan (H={current})")
   return bin
 
-def simmulated_annealing_uc(bin, iterasi, T=100):
+def simmulated_annealing_uc(bin, iterasi, T):
   reset_globals()
   for i in range(iterasi):
     current = heuristic_uc(bin)
     globals_data.display_heur.append((i, current))
     if current == 0:
-      print(f"Iterasi ke-{i+1}: solusi optimal ditemukan (H=0)")
+      #print(f"Iterasi ke-{i+1}: solusi optimal ditemukan (H=0)")
       break
     # Hitung semua neighbor
     neighbors = calculate_neighbors(bin)
@@ -275,7 +275,7 @@ def simmulated_annealing_uc(bin, iterasi, T=100):
     if deltaE < 0:
       bin = next_state
       current = next_value
-      print(f"Iterasi ke-{i+1}: perbaikan ditemukan (H={current})")
+      #print(f"Iterasi ke-{i+1}: perbaikan ditemukan (H={current})")
       
 
     else:
@@ -284,9 +284,9 @@ def simmulated_annealing_uc(bin, iterasi, T=100):
       if random.random() < p:
         bin = next_state
         current = next_value
-        print(f"Iterasi ke-{i+1}: diterima solusi lebih buruk (H={current}, p={p:.3f})")
-      else:
-        print(f"Iterasi ke-{i+1}: ditolak (H={current})")
+        #print(f"Iterasi ke-{i+1}: diterima solusi lebih buruk (H={current}, p={p:.3f})")
+      #else:
+        #print(f"Iterasi ke-{i+1}: ditolak (H={current})")
     # Turunkan suhu
     T = T * 0.95
     globals_data.display_heur.append((i, heuristic_uc(bin)))
@@ -345,6 +345,8 @@ def mutate(children, mutation_rate):
           
           # Tukar posisi barang
           barang_list[i], barang_list[j] = barang_list[j], barang_list[i]
+      child['Fitness'] = 100 / (1 + heuristic_uc(child['bin']))
+
   return children
 
 def repair_bin_uc(child, c, formatted_weights):
