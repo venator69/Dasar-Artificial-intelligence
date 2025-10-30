@@ -1,7 +1,12 @@
-# Python program to find number of bins required using
-# First Fit algorithm.
-# Kode first fit dimodifikasi dari https://www.geeksforgeeks.org/dsa/bin-packing-problem-minimize-number-of-used-bins/
+# Library dari Fungsi-Fungsi yang digunakan dalam Local search
+
+# first fit dimodifikasi dari : https://www.geeksforgeeks.org/dsa/bin-packing-problem-minimize-number-of-used-bins/
+# genetic algorithm dimodifikasi dan dibuat modular dari : https://www.geeksforgeeks.org/dsa/genetic-algorithms/
+# simulated annealing dibuat berdasarkan pseudocode dari : Russell, S., & Norvig, P. (2010). Artificial Intelligence: A Modern Approach (3rd ed.). Prentice Hall.
+# variable global disimpan di globals_data
+# kode plotting dijalankan di heur_plotter.py
 # Ditulis ulang oleh: Dennis Hubert
+
 import copy
 import random
 import math
@@ -9,6 +14,7 @@ import globals_data
 from globals_data import reset_globals, reset_gen
 # Fungsi format mapping dari array[int] -> array[dict]
 
+# Fungsi untuk memformat weight jadi array of dict dengan enumerate, [int] -> [['id':(string)],['ukuran':(int)]]
 def format_weights(weight):
   format_weights = [
     {
@@ -19,47 +25,7 @@ def format_weights(weight):
   ]
   return(format_weights)
 
-def move_neighbor_uc(bin_rem, i, j, k):
-    barang = bin_rem[j]['barang'].pop(k)
-
-    bin_rem[i]['barang'].append(barang)
-
-    # Update remaining dan total
-    bin_rem[i]['remaining'] -= barang['ukuran']
-    bin_rem[i]['total'] += barang['ukuran']
-    bin_rem[j]['remaining'] += barang['ukuran']
-    bin_rem[j]['total'] -= barang['ukuran']
-
-    # Hapus kontainer jika sudah kosong
-    if len(bin_rem[j]['barang']) == 0:
-        bin_rem.pop(j)
-
-    return bin_rem
-
-def reindex(bin_rem):
-  for index, b in enumerate(bin_rem):
-    b['kontainer'] = f'Kontainer {index+1}'
-
-# Fungsi untuk mencetak isi bin
-def print_bins(bin_rem):
-  reindex(bin_rem)
-  for b in bin_rem:
-    print(f"{b['kontainer']} (total: {b['total']})")
-    for item in b['barang']:
-      print(f"  * {item['id']} ({item['ukuran']})")
-
-def heuristic_uc(bin_rem):
-# Jika jumlah bin konstan, total ruang kosong selalu konstant. sehingga jumlah bin tidak perlu dihitung pada heuristic
-# sum(remaining) = c * len(bin_rem) - sum(total) 
-  h = 0
-  for b in bin_rem:
-    if (b['remaining'] < 0):
-      h += abs(b['remaining']) * 10 # penalti 10x untuk overfill
-    else:
-      h += b['remaining'] # total ruang kosong
-  return (h)
-    
-
+# Fungsi untuk inisialisasi bin (Worst Fit), [['id':(string)],['ukuran':(int)]], int -> [['kontainer':(string)], ['remaining':(int)], ['total':(int)], ['barang':[['id':(string)],['ukuran':(int)]]]
 def worst(weight, c):
     n = len(weight)
     # List dari bin yang digunakan
@@ -73,7 +39,6 @@ def worst(weight, c):
           'barang': [weight[i]]
       }
       bin_rem.append(new_bin)
-    
     return bin_rem
 
 # Fungsi untuk inisialisasi bin (First Fit)
@@ -112,6 +77,48 @@ def first_fit(weight, c):
         
   return bin_rem
 
+# Fungsi untuk menggeser salah satu item ke neighbor, [dict], int, int, int,  -> [dict]
+def move_neighbor_uc(bin_rem, i, j, k):
+    barang = bin_rem[j]['barang'].pop(k)
+
+    bin_rem[i]['barang'].append(barang)
+
+    # Update remaining dan total
+    bin_rem[i]['remaining'] -= barang['ukuran']
+    bin_rem[i]['total'] += barang['ukuran']
+    bin_rem[j]['remaining'] += barang['ukuran']
+    bin_rem[j]['total'] -= barang['ukuran']
+
+    # Hapus kontainer jika sudah kosong
+    if len(bin_rem[j]['barang']) == 0:
+        bin_rem.pop(j)
+
+    return bin_rem
+
+def reindex(bin_rem):
+  for index, b in enumerate(bin_rem):
+    b['kontainer'] = f'Kontainer {index+1}'
+
+# Fungsi untuk mencetak isi bin
+def print_bins(bin_rem):
+  reindex(bin_rem)
+  for b in bin_rem:
+    print(f"{b['kontainer']} (total: {b['total']})")
+    for item in b['barang']:
+      print(f"  * {item['id']} ({item['ukuran']})")
+
+def heuristic_uc(bin_rem):
+# Jika jumlah bin konstan, total ruang kosong selalu konstant. sehingga jumlah bin tidak perlu dihitung pada heuristic
+# sum(remaining) = c * len(bin_rem) - sum(total) 
+  h = 0
+  for b in bin_rem:
+    if (b['remaining'] < 0):
+      h += abs(b['remaining']) * 10 # penalti 10x untuk overfill
+    else:
+      h += b['remaining'] # total ruang kosong
+  return (h)    
+
+# Fungsi untuk menshuffle weight pada worst fit [dict], int ->
 def random_restart(bin, c):
     weight = [item for sublist in [b['barang'] for b in bin] for item in sublist]
     n = len(weight)
@@ -127,8 +134,10 @@ def random_restart(bin, c):
           'barang': [weight[i]]
       }
       bin_rem.append(new_bin)
+    reindex(bin_rem)
     return bin_rem
 
+# Fungsi untuk menghitung semua neighbor, [[dict]] -> [[[dict]]]
 def calculate_neighbors(bin_rem):
   states = []
   for i in bin_rem:
@@ -169,6 +178,7 @@ def SAHC_uc(bin, iterasi):
     else:
       # print(f"Iterasi ke-{i+1}: tidak ada perbaikan (H={current})")
       break
+  reindex(bin)
   return bin
 
 def SMHC_uc(bin, iterasi, Max_no_improve):
@@ -200,6 +210,7 @@ def SMHC_uc(bin, iterasi, Max_no_improve):
       print(f"Iterasi ke-{i+1}: tidak ada perbaikan (H={current})")
       sidestep += 1
     i += 1
+  reindex(bin)
   return bin
 
 def RRHC_uc(bins, iterasi):
